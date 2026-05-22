@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Central Cloud server hub (Isometric Cyber Gate) -->
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M54,20 L84,38 L84,70 L54,88 L24,70 L24,38 Z" />
+    <!-- Inner glowing AI optimizer brain layer -->
+    <path
+        android:fillColor="#6366F1"
+        android:pathData="M54,29 L74,41 L74,65 L54,77 L34,65 L34,41 Z" />
+    <!-- Operational grid connectors surrounding core -->
+    <path
+        android:strokeColor="#F9FAFB"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,12 L54,24 M54,84 L54,96 M16,36 L26,42 M82,42 L92,36 M16,72 L26,66 M82,66 L92,72" />
+</vector>

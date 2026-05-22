@@ -1,0 +1,6 @@
+{
+  "name": "AI CDN Sync",
+  "description": "AI-powered Content Delivery Network dashboard for global content integration, real-time edge synchronization, and intelligent cache optimization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
