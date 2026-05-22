@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,13 +68,11 @@ fun CdnDashboardScreen(viewModel: CdnViewModel) {
     // Display snackbar updates whenever replication notifications occur
     LaunchedEffect(snackbarMsg) {
         snackbarMsg?.let { msg ->
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar(
-                    message = msg,
-                    duration = SnackbarDuration.Short
-                )
-                viewModel.resetSyncingState()
-            }
+            snackbarHostState.showSnackbar(
+                message = msg,
+                duration = SnackbarDuration.Short
+            )
+            viewModel.resetSyncingState()
         }
     }
 
@@ -251,6 +248,9 @@ fun CdnDashboardScreen(viewModel: CdnViewModel) {
                         onSizeChange = { uploadSizeKb = it },
                         typeOptions = typeOptions,
                         selectedPlatforms = selectedPlatforms,
+                        onPlatformToggle = { platform ->
+                            selectedPlatforms[platform] = !(selectedPlatforms[platform] ?: false)
+                        },
                         onSimulateReplication = {
                             val targets = selectedPlatforms.filter { it.value }.keys.toList()
                             if (uploadName.isNotBlank() && targets.isNotEmpty()) {
@@ -421,7 +421,7 @@ fun NetworkEdgesTab(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Hit Ratio", fontSize = 10.sp, color = SlateTextSecondary)
                             Text(
-                                "%.0f%%".format(node.cacheHitRate * 100f),
+                                "${(node.cacheHitRate * 100f).toInt()}%",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = FiberCyan
@@ -508,9 +508,9 @@ fun InteractiveNetworkMap(nodes: List<CdnEdgeNode>) {
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             // Draw background coordinate rows
-            val dotSpacing = 16.dp.toPx()
-            for (x in 0..size.width.toInt() step dotSpacing.toInt()) {
-                for (y in 0..size.height.toInt() step dotSpacing.toInt()) {
+            val dotSpacing = (16.dp.toPx().toInt()).coerceAtLeast(32)
+            for (x in 0..size.width.toInt() step dotSpacing) {
+                for (y in 0..size.height.toInt() step dotSpacing) {
                     drawCircle(
                         color = BorderColor.copy(alpha = 0.25f),
                         radius = 1.2f,
@@ -627,6 +627,7 @@ fun ContentSyncTab(
     onSizeChange: (Int) -> Unit,
     typeOptions: List<String>,
     selectedPlatforms: Map<String, Boolean>,
+    onPlatformToggle: (String) -> Unit,
     onSimulateReplication: () -> Unit,
     onClearLogs: () -> Unit
 ) {
@@ -751,12 +752,12 @@ fun ContentSyncTab(
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.clickable {
-                                            (selectedPlatforms as MutableMap)[platform] = !isEnabled
+                                            onPlatformToggle(platform)
                                         }
                                     ) {
                                         Checkbox(
                                             checked = isEnabled,
-                                            onCheckedChange = { (selectedPlatforms as MutableMap)[platform] = it },
+                                            onCheckedChange = null,
                                             colors = CheckboxDefaults.colors(
                                                 checkedColor = FiberCyan,
                                                 uncheckedColor = SlateTextSecondary,
@@ -1131,15 +1132,13 @@ fun AiOptimizeTab(
                                     .border(1.dp, IntelligencePurple.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                     .padding(12.dp)
                             ) {
-                                SelectionContainer {
-                                    Text(
-                                        text = aiResponse ?: "",
-                                        fontSize = 11.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = SlateTextPrimary,
-                                        lineHeight = 16.sp
-                                    )
-                                }
+                                Text(
+                                    text = aiResponse ?: "",
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = SlateTextPrimary,
+                                    lineHeight = 16.sp
+                                )
                             }
                         }
                     }

@@ -18,6 +18,85 @@ class CdnViewModel(application: Application) : AndroidViewModel(application) {
     private val database = CdnDatabase.getDatabase(application, viewModelScope)
     private val repository = CdnRepository(database.cdnDao())
 
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val currentNodes = repository.edgeNodes.first()
+                if (currentNodes.isEmpty()) {
+                    val defaultNodes = listOf(
+                        CdnEdgeNode(name = "Edge Tokyo-North", region = "Asia-Pacific (Tokyo)", ipAddress = "192.16.8.10", status = "ONLINE", activeLoad = 45, bandwidthMbps = 720, cacheHitRate = 0.94f),
+                        CdnEdgeNode(name = "Edge London-West", region = "Europe (London)", ipAddress = "192.16.4.15", status = "ONLINE", activeLoad = 62, bandwidthMbps = 850, cacheHitRate = 0.91f),
+                        CdnEdgeNode(name = "Edge Frankfurt-Main", region = "Europe (Frankfurt)", ipAddress = "192.16.5.12", status = "ONLINE", activeLoad = 24, bandwidthMbps = 940, cacheHitRate = 0.96f),
+                        CdnEdgeNode(name = "Edge Oregon-Valley", region = "US-West (Oregon)", ipAddress = "192.16.1.20", status = "ONLINE", activeLoad = 78, bandwidthMbps = 1100, cacheHitRate = 0.89f),
+                        CdnEdgeNode(name = "Edge Sydney-Harbour", region = "Asia-Pacific (Sydney)", ipAddress = "192.16.9.8", status = "ONLINE", activeLoad = 15, bandwidthMbps = 410, cacheHitRate = 0.98f),
+                        CdnEdgeNode(name = "Edge São Paulo", region = "South America (São Paulo)", ipAddress = "192.16.12.3", status = "DEGRADED", activeLoad = 89, bandwidthMbps = 280, cacheHitRate = 0.72f)
+                    )
+                    for (node in defaultNodes) {
+                        repository.insertEdgeNode(node)
+                    }
+                }
+
+                val currentRules = repository.optimizationRules.first()
+                if (currentRules.isEmpty()) {
+                    val defaultRules = listOf(
+                        AiOptimizationRule(
+                            title = "Predictive Cache Pre-warming",
+                            description = "Warm up European edge-caches with video media payloads before regional peak viewing slots (6:00 PM - 11:00 PM CET).",
+                            ruleType = "Pre-warming",
+                            isActive = true,
+                            confidenceScore = 0.95f,
+                            estimatedSavingsGb = 1450f
+                        ),
+                        AiOptimizationRule(
+                            title = "Adaptive WebP/AVIF Compression",
+                            description = "Enable on-the-fly graphic asset conversion for users on high-latency mobile configurations.",
+                            ruleType = "Edge Compression",
+                            isActive = false,
+                            confidenceScore = 0.88f,
+                            estimatedSavingsGb = 620f
+                        ),
+                        AiOptimizationRule(
+                            title = "Latency-Balanced failover",
+                            description = "Reroute South American transit automatically through US Oregon-Valley relays if Frankfurt delays cross 250ms.",
+                            ruleType = "Intelligent Routing",
+                            isActive = true,
+                            confidenceScore = 0.92f,
+                            estimatedSavingsGb = 810f
+                        )
+                    )
+                    for (rule in defaultRules) {
+                        repository.insertRule(rule)
+                    }
+                }
+
+                val currentContent = repository.contentItems.first()
+                if (currentContent.isEmpty()) {
+                    val defaultItem = ContentItem(
+                        name = "Global_Ad_Campaign_2026_FHD.mp4",
+                        mimeType = "Video (MP4)",
+                        sizeKb = 48500,
+                        sourceUrl = "https://cdn.example.com/assets/video_fhd.mp4",
+                        targetPlatforms = "YouTube, Twitch, AWS S3",
+                        syncStatus = "COMPLETED",
+                        progress = 100
+                    )
+                    repository.insertContentItem(defaultItem)
+
+                    val defaultRecords = listOf(
+                        SyncActivityRecord(contentItemName = "Global_Ad_Campaign_2026_FHD.mp4", platform = "YouTube", speedMbps = 450f, progress = 100, status = "COMPLETED"),
+                        SyncActivityRecord(contentItemName = "Global_Ad_Campaign_2026_FHD.mp4", platform = "Twitch", speedMbps = 250f, progress = 100, status = "COMPLETED"),
+                        SyncActivityRecord(contentItemName = "Global_Ad_Campaign_2026_FHD.mp4", platform = "AWS S3", speedMbps = 900f, progress = 100, status = "COMPLETED")
+                    )
+                    for (record in defaultRecords) {
+                        repository.insertSyncRecord(record)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("CdnViewModel", "Dynamic startup database loading failed", e)
+            }
+        }
+    }
+
     // Flows for reactive UI updates from Room
     val edgeNodes = repository.edgeNodes
     val contentItems = repository.contentItems
@@ -139,8 +218,18 @@ class CdnViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun askGeminiAdvisor(userQuery: String) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+        val apiKey = when {
+            BuildConfig.MY_GEMINI_API_KEY.isNotEmpty() && 
+                BuildConfig.MY_GEMINI_API_KEY != "MY_GEMINI_API_KEY_PLACEHOLDER" && 
+                BuildConfig.MY_GEMINI_API_KEY != "MY_GEMINI_API_KEY" -> BuildConfig.MY_GEMINI_API_KEY
+            BuildConfig.GEMINI_API_KEY.isNotEmpty() && 
+                BuildConfig.GEMINI_API_KEY != "GEMINI_API_KEY_PLACEHOLDER" && 
+                BuildConfig.GEMINI_API_KEY != "GEMINI_API_KEY" && 
+                BuildConfig.GEMINI_API_KEY != "MY_GEMINI_API_KEY" -> BuildConfig.GEMINI_API_KEY
+            else -> ""
+        }
+
+        if (apiKey.isEmpty()) {
             // Standard simulated diagnostic advisor if no key is entered
             viewModelScope.launch {
                 _aiLoading.value = true
